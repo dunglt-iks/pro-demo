@@ -1,0 +1,9 @@
+# Tài khoản dùng trong test. Mật khẩu ghi thẳng vì là tài khoản mẫu của môi trường dev (BE tạo sẵn lúc khởi động).
+admin:
+  username: admin
+  password: Admin@123
+  name: Quản trị viên
+user1:
+  username: user1
+  password: User@123
+  name: Nguyễn Văn A

@@ -1,0 +1,6 @@
+node_modules/
+fe/.next/
+fe/next-env.d.ts
+fe/tsconfig.tsbuildinfo
+.run/
+e2e/test-results/

@@ -1,0 +1,13 @@
+{
+  "name": "project1",
+  "private": true,
+  "scripts": {
+    "up": "bash scripts/up.sh",
+    "down": "bash scripts/down.sh",
+    "e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.1",
+    "@types/node": "20.19.43"
+  }
+}

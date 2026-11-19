@@ -1,0 +1,24 @@
+# Môi trường dev trên dev-02 (deploy-dev.yml). FE mở cổng 3100; BE 8180 chỉ trong mạng compose, FE gọi qua /api.
+# Dữ liệu trên RAM — mỗi lần deploy về dữ liệu mẫu. Giá trị ghi cố định vì là môi trường demo.
+name: project1-dev
+
+services:
+  be:
+    build: ./be
+    environment:
+      PORT: "8180"
+      TEST_API: "1"                       # /api/test/* cho e2e
+      JWT_SECRET: project1-dev-secret
+    restart: unless-stopped
+
+  fe:
+    build:
+      context: ./fe
+      args:
+        BE_URL: http://be:8180            # next build ghi địa chỉ rewrite /api vào bản build
+    environment:
+      BE_URL: http://be:8180
+    ports:
+      - "3100:3100"
+    depends_on: [be]
+    restart: unless-stopped

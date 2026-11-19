@@ -1,0 +1,40 @@
+# Deploy môi trường dev lên máy dev-02 (runner tự host, label "dev") bằng docker compose — compose.dev.yml.
+# Chạy khi ci xanh trên main (merge PR), hoặc chạy tay. App: FE http://localhost:3100 trên dev-02 (BE chỉ trong
+# mạng compose).
+name: deploy-dev
+
+on:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false   # hai lần merge sát nhau: deploy lần lượt
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: [self-hosted, dev]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}   # đúng commit ci vừa kiểm
+      - name: Build + chạy
+        run: docker compose -f compose.dev.yml up -d --build --remove-orphans
+      - name: Chờ app
+        run: |
+          for _ in $(seq 1 60); do
+            curl -sf http://localhost:3100/login >/dev/null && { echo "✓ http://localhost:3100"; exit 0; }
+            sleep 2
+          done
+          echo "✘ app không lên sau 120 giây"; docker compose -f compose.dev.yml logs --tail 50; exit 1
+      - name: Dọn image cũ
+        if: always()
+        run: docker image prune -f
