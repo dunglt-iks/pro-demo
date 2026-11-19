@@ -1,0 +1,108 @@
+# ai-kit.yml — cấu hình ai-kit của dự án. Xem .ai-kit/docs/11-cau-hinh.md.
+# Mọi đường dẫn tính từ gốc repo. Khoá nào trùng giá trị mặc định có thể bỏ.
+# Lớp kỹ thuật (stack, code, lint…) là của repo: khai ở `guides`, kit không chép lại.
+version: 2
+kitRef: v2                             # phiên bản ai-kit; vỏ lệnh tự clone bản này vào .ai-kit/. Đổi cùng lúc với
+                                       # dunglt-iks/ai-kit/actions/{gate,e2e}@<ref> trong CI (nếu có), rồi kit init
+
+language: vi                           # ngôn ngữ tài liệu, câu hỏi, báo cáo AI viết ra
+
+project:
+  name: project1
+  baseBranch: main
+  remote: origin
+  prTool: gh                           # gh | none
+
+agents: [claude]                       # kit init điền: claude, agents-md
+guides: [CLAUDE.md, fe/AGENTS.md]               # kit init điền: file hướng dẫn AI sẵn có của repo
+
+docs:
+  author: BA Team                      # cột Tác giả trong Change Log
+  splitAt: 50000                       # FSD lớn hơn (byte) thì tách thành thư mục
+
+# ── Lớp quy trình: tài liệu spec ─────────────────────────────────────────────
+spec:
+  adapter: prd-fsd                     # có sẵn trong .ai-kit/adapters/spec/, hoặc ./đường/dẫn/adapter.mjs
+  roots: [docs/features]               # thư mục chứa module: <root>/<MÃ>-<tên>/PRD-<tên>.md, FSD-<tên>.md
+  codeDigits: 2                        # số chữ số của F/US/SCR/BR: 2 (DM-F01) hoặc 3 (DM-F001); hết số thì tự dài thêm 1
+  # featurePattern: '[A-Z]{2,4}-F\d{2,3}'   # mặc định theo codeDigits; khai khi mã module khác dạng (vd CORE-C\d{2})
+  normalize: []                        # vd { pattern: '\bC(\d{2})-F', replace: 'CORE-C$1-F' }
+  status: { draft: Nháp, approved: Đã duyệt }
+  index: null                          # tuỳ chọn: file đăng ký module (PRD tổng)
+  smallItem: null                      # tuỳ chọn: { pattern: 'KI-\d{2}', file: docs/features/implementation-status.md }
+  plansDir: docs/plans
+  templates: {}                        # ghi đè khuôn của kit: { fsd, prd, plan, prototype }
+  wireframeWidth: 76
+  prototype: true                      # false: dự án không có giao diện, bỏ /prototype
+
+progress:
+  file: null                           # tuỳ chọn: bảng tiến độ theo mã (vd docs/features/implementation-status.md)
+  values: { todo: Chưa bắt đầu, doing: Đang triển khai, done: [Hoàn thành, Đã kiểm thử] }
+
+stack:
+  checks:                              # lệnh /dev, /ship chạy theo thứ tự — theo CLAUDE.md "Trước khi commit" + ci.yml
+    - name: gofmt
+      run: 'cd be && test -z "$(gofmt -l .)"'
+    - name: go vet
+      run: cd be && go vet ./...
+    - name: go build
+      run: cd be && go build ./...
+    - name: go test
+      run: cd be && go test -count=1 ./...
+    - name: fe lint
+      run: cd fe && npm run lint
+    - name: fe build
+      run: cd fe && npm run build
+  traceability: { searchPaths: [be, fe/src] } # nơi tìm mã truy vết trong code + test
+  env: "bash scripts/up.sh → http://localhost:3000 (BE :8080, TEST_API=1); tắt: bash scripts/down.sh"
+
+review:
+  checklist: null                      # tuỳ chọn: file checklist review riêng của repo
+
+# ── TAF: test case, script, chạy, báo cáo ────────────────────────────────────
+# Cấu trúc e2e/ (docs/01 §3): testcases/<MOD>/ scripts/<MOD>/ pages/<MOD>|common/ tests/ support/ testdata/
+# test-results/ (không commit: reports/ playwright/ .auth/ raw/). <MOD> = mã module, vd DM.
+testcases:
+  dir: e2e/testcases
+  labels: vi                           # vi | en | { base: en, expected: "…" }
+  personas: e2e/testdata/personas.yml  # tuỳ chọn: file liệt kê tên persona hợp lệ (null = không kiểm)
+
+scripts:
+  dir: e2e/scripts                     # script sinh ra: <dir>/<MOD>/<MÃ><ext>
+  ext: .spec.ts                        # playwright.config.ts chỉ chạy *.spec.ts
+  guide: e2e/README.md                 # hướng dẫn viết test e2e của dự án, AI đọc trước khi sinh script
+  allowedPaths:                        # AI sinh script / triage chỉ được ghi vào đây (TC đã duyệt: không bao giờ)
+    - e2e/scripts/**
+    - e2e/pages/**
+    - e2e/support/**                   # fixture dựng dữ liệu (run.setupPaths) — AI thêm loại dữ liệu mới, người duyệt
+  forbid:                              # regex cấm trong script sinh ra
+    - 'page\.locator\('                # locator chỉ nằm trong page object
+    - 'waitForTimeout\('
+  lint: null                           # tuỳ chọn: lệnh kiểm sau khi sinh (vd npx tsc --noEmit)
+
+# kit e2e chạy lệnh này vào app dự án đã dựng sẵn (CI của repo dựng; ở máy người tự bật). Dựng / tắt app, dữ liệu
+# nền, persona, dọn dữ liệu từng test là việc của dự án (CI, globalSetup, fixture) — xem .ai-kit/docs/04.
+run:
+  command: npx playwright test --reporter=json,list {files}   # {files} = script được chọn; {grep} = --grep (tuỳ chọn)
+  baseUrlEnv: E2E_BASE_URL             # kit e2e --base-url <url> đặt biến này; cấu hình test của dự án đọc nó
+  smoke: [e2e/tests/**]                # phạm vi changed luôn chạy kèm (smoke / đường chính), bắt hồi quy chéo feature
+  smokePriority: P1                    # changed chạy thêm TC ưu tiên này của các feature khác (null = tắt)
+  quarantine: e2e/quarantine.yml       # test đang cách ly [{ test, issue, until, reason }] — xem kit flaky
+  setupPaths: [e2e/support/**]         # fixture / dựng dữ liệu: test fail ở đây → "lỗi dựng dữ liệu", báo riêng
+  cwd: .
+  report: e2e/test-results/raw/results.json   # JSON của Playwright; result.json, triage.json nằm cạnh
+  reportsDir: e2e/test-results/reports  # báo cáo markdown cho người đọc: latest.md + mỗi lần chạy một file
+  keepReports: 20                      # số báo cáo theo thời gian giữ lại
+
+trigger:
+  codePaths: [be/**, fe/src/**]        # PR sửa các file này phải khai mã feature
+  skipLabel: e2e-skip                  # statusFile/statusDone mặc định lấy từ progress
+  featureMap: {}                       # { "src/shared/**": [DM-F01, DM-F02] } — code dùng chung kéo thêm feature
+
+gate:
+  blockedLabel: e2e-blocked
+  allowSelfApproval: true              # false: người viết / sửa TC không được tự duyệt
+
+tracker:
+  adapter: github
+  labels: [bug, e2e]

@@ -41,10 +41,40 @@
 
 ## Tài liệu
 
-- Yêu cầu chức năng ở `docs/`: `docs/features/<chức năng>.md` (ticket: user story + tiêu chí chấp nhận) và
-  `docs/SRS-*.md` (đặc tả theo phân hệ, mã `REQ-###`). Thêm chức năng mới thì viết tài liệu trước khi code.
+- Chức năng mới: spec theo ai-kit (PRD/FSD) ở `docs/features/<MOD>-<tên>/`, mã `<MOD>-F##…` — viết bằng `/spec`,
+  người duyệt bằng `kit approve` trước khi code. Ví dụ module đăng nhập là `AUTH` (quên mật khẩu, đăng ký: `AUTH-F02`, …).
+- Tài liệu cũ, giữ nguyên làm tham khảo: `docs/features/login.md` (ticket AUTH-12, đã làm) và
+  `docs/SRS-quan-ly-nhan-vien.md` (mã `REQ-###`, chưa làm — khi triển khai thì chuyển sang module mới qua `/spec`).
 
 ## Git
 
 - Commit: `feat(be): …`, `feat(fe): …`, `fix(be): …`, `test(e2e): …`, `docs: …`.
 - Không commit `fe/.next/`, `node_modules/`, `.run/`, `e2e/test-results/`.
+
+<!-- ai-kit:start — do `kit init` quản lý; sửa ngoài khối này -->
+## ai-kit — quy trình spec → prototype → dev → test → ship
+
+Repo dùng ai-kit (gắn ở `.ai-kit/`, cấu hình `ai-kit.yml`). Có hai lớp quy định:
+
+- **Kỹ thuật** — stack, framework, cấu trúc code, lint, bảo mật, test đơn vị: theo hướng dẫn của
+  repo (phần ngoài khối này và các file trong `guides` của `ai-kit.yml`).
+- **Quy trình** — tài liệu spec, mã yêu cầu, trạng thái duyệt, version, kế hoạch, test case/e2e,
+  truy vết, PR: theo `.ai-kit/RULES.md` và `ai-kit.yml`.
+
+Khi hai lớp đụng nhau: *code thế nào* theo repo; *spec, quy trình, e2e đi đường nào* theo ai-kit.
+Mâu thuẫn thật thì dừng và hỏi người dùng, không tự chọn.
+
+Trước mọi việc thuộc quy trình, chạy `node .ai-kit/cli/bin/kit.mjs context`. Chưa có `.ai-kit/` thì
+gắn kit theo `kitRef` trong `ai-kit.yml`: `git clone --depth 1 -b <kitRef> https://github.com/dunglt-iks/ai-kit .ai-kit`
+rồi `npm ci --prefix .ai-kit --omit=dev`. Duyệt spec / prototype / test case là việc của người, bằng
+`kit approve <mã>` (thêm `--prototype` / `--testcase`) — AI không tự đặt trạng thái đã duyệt.
+
+- `/spec` — làm rõ yêu cầu, ghi vào tài liệu spec (trạng thái nháp)
+- `/prototype` — dựng HTML tĩnh từ wireframe trong spec
+- `/testcase` — sinh/đồng bộ test case e2e từ spec + prototype đã duyệt
+- `/e2e-script` — sinh/cập nhật script e2e từ test case đã duyệt, chạy thử
+- `/e2e-triage` — phân loại test e2e fail (ở máy hoặc lần chạy CI), sửa script, ghi bug app
+- `/dev` — kế hoạch → code → test → review theo spec đã duyệt; sửa bug từ issue
+- `/ship` — kiểm tra cuối, mở PR, theo dõi CI
+- `/kit-adopt` — đề xuất cấu hình ai-kit.yml khi mới nhúng kit
+<!-- ai-kit:end -->

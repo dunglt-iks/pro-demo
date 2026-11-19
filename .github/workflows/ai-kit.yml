@@ -1,0 +1,51 @@
+# ai-kit (TAF) — theo .ai-kit/docs/04-ci-workflow.md §4, chỉnh cho project1:
+#   PR → gate (TC + script khớp spec).  deploy-dev xong → e2e vào app dev trên dev-02.
+# e2e chạy trên runner tự host của dev-02 vì app dev chỉ mở ở localhost:3100 trên máy đó. Chưa có staging nên không
+# chạy hằng đêm. Mật khẩu persona là tài khoản mẫu ghi trong e2e/testdata/personas.yml nên không cần secret.
+# Đổi kitRef trong ai-kit.yml thì đổi @v2 ở đây cùng lúc.
+name: ai-kit
+
+on:
+  pull_request:
+  workflow_run:
+    workflows: ["deploy-dev"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      scope: { description: "all | mã feature", default: all }
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  gate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    concurrency: { group: "ai-kit-gate-${{ github.event.pull_request.number }}", cancel-in-progress: true }
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: dunglt-iks/ai-kit/actions/gate@v2
+
+  e2e:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    runs-on: [self-hosted, dev]
+    timeout-minutes: 60
+    concurrency: { group: ai-kit-e2e-dev, cancel-in-progress: false }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}   # đúng commit vừa deploy
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm ci && npx playwright install chromium
+      - uses: dunglt-iks/ai-kit/actions/e2e@v2
+        with:
+          scope: ${{ inputs.scope || 'all' }}
+          env: dev
+          base-url: http://localhost:3100
+          close-fixed: 'true'

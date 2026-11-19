@@ -4,3 +4,5 @@ fe/next-env.d.ts
 fe/tsconfig.tsbuildinfo
 .run/
 e2e/test-results/
+# ai-kit
+/.ai-kit

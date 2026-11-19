@@ -3,6 +3,9 @@
 Playwright (TypeScript). App phải đang chạy: `bash scripts/up.sh` (BE chạy với `TEST_API=1`). Chạy test: `npx
 playwright test` ở gốc `project1` (địa chỉ app: `E2E_BASE_URL`, mặc định `http://localhost:3000`).
 
+Test e2e mới đi qua ai-kit (TAF): test case `e2e/testcases/<MOD>/` (`/testcase`, người duyệt) → script
+`e2e/scripts/<MOD>/<MÃ>.spec.ts` (`/e2e-script`), page object ở `e2e/pages/`. Không viết e2e tay ở chỗ khác.
+
 ## Thư mục
 
 | Thư mục | Nội dung |
