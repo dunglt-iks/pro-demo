@@ -1,5 +1,8 @@
 # [AUTH-12] Đăng nhập bằng tên đăng nhập và mật khẩu
 
+> **Đã chuyển sang AUTH-F01** — [`AUTH-xac-thuc/FSD-xac-thuc.md`](AUTH-xac-thuc/FSD-xac-thuc.md). File này giữ làm tham khảo,
+> không cập nhật nữa.
+
 **Loại:** Story · **Trạng thái:** Done · **Sprint:** 3 · **Người phụ trách:** team web
 
 ## Mô tả

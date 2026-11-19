@@ -1,0 +1,280 @@
+<!-- ai-kit:prototype AUTH-F01=7528c932342c5e72 AUTH-F02=2f5e5af354ec906e -->
+<!--
+  Prototype module AUTH — dựng từ FSD-xac-thuc.md bằng /prototype. HTML/CSS/JS thuần, không gọi API; dữ liệu mẫu.
+  Mỗi màn hình một <section class="screen"> (id = mã SCR viết thường); thành phần đánh số mang data-ref="<mã SCR>-<số>".
+  Spec luôn thắng prototype. Dòng dấu ai-kit:prototype (nếu có) do `kit approve <mã> --prototype` ghi — không sửa tay.
+-->
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Prototype — Xác thực (AUTH)</title>
+<style>
+  :root {
+    --bg: #f4f6fa; --card: #fff; --text: #1f2937; --muted: #6b7280;
+    --border: #cbd5e1; --primary: #2563eb; --danger: #b91c1c; --danger-bg: #fef2f2; --ok: #166534; --ok-bg: #f0fdf4;
+  }
+  html[data-theme='dark'] {
+    --bg: #0f172a; --card: #1e293b; --text: #e5e7eb; --muted: #94a3b8; --border: #475569;
+    --danger: #fca5a5; --danger-bg: #450a0a; --ok: #86efac; --ok-bg: #052e16;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); }
+  .proto-bar {
+    display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 8px 16px; font-size: 12px;
+    background: repeating-linear-gradient(45deg, #fff8e1, #fff8e1 10px, #fffbea 10px, #fffbea 20px);
+    border-bottom: 1px dashed #d9b100; color: #6b5900;
+  }
+  .proto-bar nav { display: flex; gap: 6px; flex-wrap: wrap; }
+  .proto-bar button, .proto-bar select { font: inherit; padding: 2px 8px; border: 1px solid #d9b100; background: #fff; cursor: pointer; }
+  .proto-bar button[aria-current='true'] { background: #d9b100; color: #fff; }
+  .proto-help { width: 100%; color: #6b5900; }
+  main { padding: 32px 16px; }
+  .screen { display: none; }
+  .screen.active { display: block; }
+  .card { max-width: 400px; margin: 0 auto; background: var(--card); border-radius: 8px; padding: 24px; box-shadow: 0 1px 3px rgb(0 0 0 / .15); }
+  .home { max-width: 900px; }
+  h1 { font-size: 20px; margin: 0 0 20px; }
+  .field { margin-bottom: 14px; }
+  label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+  input { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font: inherit; background: var(--card); color: var(--text); }
+  input:focus { outline: none; border-color: var(--primary); }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .msg { padding: 8px 12px; border-radius: 6px; font-size: 14px; margin-bottom: 14px; }
+  .msg.error { background: var(--danger-bg); color: var(--danger); }
+  .msg.ok { background: var(--ok-bg); color: var(--ok); }
+  .muted { color: var(--muted); font-size: 14px; margin: -8px 0 20px; }
+  .btn { width: 100%; padding: 8px 12px; border: 0; border-radius: 6px; background: var(--primary); color: #fff; font: inherit; font-weight: 500; cursor: pointer; }
+  .btn:disabled { opacity: .6; cursor: default; }
+  .btn.ghost { width: auto; background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .link { display: inline-block; margin-top: 16px; font-size: 14px; color: var(--primary); cursor: pointer; background: none; border: 0; padding: 0; }
+  .home-head { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 16px; }
+  .placeholder { border: 1px dashed var(--border); border-radius: 6px; padding: 32px; text-align: center; color: var(--muted); }
+  [hidden] { display: none !important; }
+  [data-ref]:hover { outline: 1px dashed #d9b100; outline-offset: 2px; }
+</style>
+</head>
+<body>
+<div class="proto-bar">
+  <strong>PROTOTYPE</strong> <span>— minh hoạ tĩnh, không phải UI thật. Spec: FSD-xac-thuc.md v1.0</span>
+  <nav id="screen-nav"></nav>
+  <label style="display:inline;font-weight:400;margin:0">Kịch bản máy chủ:
+    <select id="scenario">
+      <option value="ok">Bình thường</option>
+      <option value="offline">Mất kết nối (E1)</option>
+      <option value="error">Lỗi hệ thống (E2)</option>
+    </select>
+  </label>
+  <button type="button" onclick="expireReset()">Làm phiên đặt lại hết hạn (F02-US02-A4)</button>
+  <button type="button" onclick="expireLogin()">Làm phiên đăng nhập hết hạn (F01-US02-A2)</button>
+  <button type="button" onclick="toggleTheme()">Sáng/tối</button>
+  <span class="proto-help">Tài khoản mẫu: admin / Admin@123 / admin@project1.local · user1 / User@123 / user1@project1.local ·
+    nomail / Nomail@123 (chưa có email — chỉ để thử F02-US01-A2, không phải dữ liệu mẫu). Đặt lại mật khẩu xong thì mật khẩu mẫu đổi theo.</span>
+</div>
+
+<main>
+  <!-- ── AUTH-F01-SCR01 Trang đăng nhập ─────────────────────────────── -->
+  <section class="screen" id="auth-f01-scr01" data-title="F01-SCR01 Đăng nhập">
+    <div class="card">
+      <h1 data-ref="AUTH-F01-SCR01-1">Đăng nhập</h1>
+      <p class="msg ok" data-ref="AUTH-F01-SCR01-2" id="login-ok" hidden>Đặt lại mật khẩu thành công. Đăng nhập bằng mật khẩu mới.</p>
+      <form id="login-form" novalidate>
+        <div class="field">
+          <label for="login-username">Tên đăng nhập</label>
+          <input id="login-username" data-ref="AUTH-F01-SCR01-3" autocomplete="username" />
+        </div>
+        <div class="field">
+          <label for="login-password">Mật khẩu</label>
+          <input id="login-password" data-ref="AUTH-F01-SCR01-4" type="password" autocomplete="current-password" />
+        </div>
+        <p class="msg error" role="alert" data-ref="AUTH-F01-SCR01-5" id="login-error" hidden></p>
+        <button class="btn" type="submit" data-ref="AUTH-F01-SCR01-6" id="login-btn">Đăng nhập</button>
+      </form>
+      <button class="link" type="button" data-ref="AUTH-F01-SCR01-7" onclick="go('auth-f02-scr01')">Quên mật khẩu?</button>
+    </div>
+  </section>
+
+  <!-- ── AUTH-F01-SCR02 Trang chủ ───────────────────────────────────── -->
+  <section class="screen" id="auth-f01-scr02" data-title="F01-SCR02 Trang chủ">
+    <div class="card home">
+      <div class="home-head">
+        <strong data-ref="AUTH-F01-SCR02-1" id="greeting">Xin chào &lt;tên hiển thị&gt;</strong>
+        <button class="btn ghost" type="button" data-ref="AUTH-F01-SCR02-2" onclick="logout()">Đăng xuất</button>
+      </div>
+      <div class="placeholder" data-ref="AUTH-F01-SCR02-3">&lt;nội dung trang chủ — ngoài phạm vi module&gt;</div>
+    </div>
+  </section>
+
+  <!-- ── AUTH-F02-SCR01 Quên mật khẩu — xác minh ────────────────────── -->
+  <section class="screen" id="auth-f02-scr01" data-title="F02-SCR01 Xác minh">
+    <div class="card">
+      <h1 data-ref="AUTH-F02-SCR01-1">Quên mật khẩu</h1>
+      <p class="muted" data-ref="AUTH-F02-SCR01-2">Nhập tên đăng nhập và email của tài khoản để đặt lại mật khẩu.</p>
+      <form id="verify-form" novalidate>
+        <div class="field">
+          <label for="verify-username">Tên đăng nhập</label>
+          <input id="verify-username" data-ref="AUTH-F02-SCR01-3" autocomplete="username" />
+        </div>
+        <div class="field">
+          <label for="verify-email">Email</label>
+          <input id="verify-email" data-ref="AUTH-F02-SCR01-4" type="email" autocomplete="email" />
+        </div>
+        <p class="msg error" role="alert" data-ref="AUTH-F02-SCR01-5" id="verify-error" hidden></p>
+        <button class="btn" type="submit" data-ref="AUTH-F02-SCR01-6" id="verify-btn">Tiếp tục</button>
+      </form>
+      <button class="link" type="button" data-ref="AUTH-F02-SCR01-7" onclick="go('auth-f01-scr01')">&lt; Về đăng nhập</button>
+    </div>
+  </section>
+
+  <!-- ── AUTH-F02-SCR02 Quên mật khẩu — đặt mật khẩu mới ─────────────── -->
+  <section class="screen" id="auth-f02-scr02" data-title="F02-SCR02 Mật khẩu mới">
+    <div class="card">
+      <h1 data-ref="AUTH-F02-SCR02-1">Đặt mật khẩu mới</h1>
+      <p class="muted" data-ref="AUTH-F02-SCR02-2" id="reset-account">Tài khoản: &lt;tên đăng nhập&gt;</p>
+      <form id="reset-form" novalidate>
+        <div class="field">
+          <label for="reset-password">Mật khẩu mới</label>
+          <input id="reset-password" data-ref="AUTH-F02-SCR02-3" type="password" autocomplete="new-password" aria-describedby="reset-hint" />
+          <p class="hint" id="reset-hint">Từ 8 đến 16 ký tự</p>
+        </div>
+        <div class="field">
+          <label for="reset-confirm">Nhập lại mật khẩu mới</label>
+          <input id="reset-confirm" data-ref="AUTH-F02-SCR02-4" type="password" autocomplete="new-password" />
+        </div>
+        <p class="msg error" role="alert" data-ref="AUTH-F02-SCR02-5" id="reset-error" hidden></p>
+        <button class="btn" type="submit" data-ref="AUTH-F02-SCR02-6" id="reset-btn">Đặt lại mật khẩu</button>
+      </form>
+      <button class="link" type="button" data-ref="AUTH-F02-SCR02-7" onclick="cancelReset()">&lt; Về đăng nhập</button>
+    </div>
+  </section>
+</main>
+
+<script>
+  // ── Dữ liệu mẫu, trạng thái giả lập ──────────────────────────────────
+  const accounts = [
+    { username: 'admin', name: 'Quản trị viên', email: 'admin@project1.local', password: 'Admin@123' },
+    { username: 'user1', name: 'Nguyễn Văn A', email: 'user1@project1.local', password: 'User@123' },
+    { username: 'nomail', name: 'Chưa có email', email: null, password: 'Nomail@123' },
+  ];
+  let loggedIn = null;   // tài khoản có phiên đăng nhập còn hiệu lực
+  let reset = null;      // { account, status: 'con_hieu_luc' | 'da_dung' | 'da_huy', expired }
+  const norm = (s) => s.trim().toLowerCase();                 // AUTH-BR01, AUTH-BR05
+  const $ = (id) => document.getElementById(id);
+
+  function server() {   // giả lập gọi máy chủ: chờ 600ms, theo kịch bản trên thanh PROTOTYPE
+    return new Promise((ok, fail) => setTimeout(() => {
+      const s = $('scenario').value;
+      if (s === 'offline') fail('Không kết nối được máy chủ');   // E1
+      else if (s === 'error') fail('Lỗi hệ thống');               // E2
+      else ok();
+    }, 600));
+  }
+  function showError(id, text) { $(id).textContent = text; $(id).hidden = !text; }
+  function busy(btn, on, label) { btn.disabled = on; btn.textContent = on ? label.busy : label.idle; }
+  const resetValid = () => reset && reset.status === 'con_hieu_luc' && !reset.expired && accounts.includes(reset.account);
+
+  // ── Chuyển màn + quy tắc hiển thị khi mở trang ───────────────────────
+  const screens = [...document.querySelectorAll('.screen')];
+  const nav = $('screen-nav');
+  function show(id) {
+    screens.forEach((s) => s.classList.toggle('active', s.id === id));
+    nav.querySelectorAll('button').forEach((b) => b.setAttribute('aria-current', String(b.dataset.id === id)));
+    history.replaceState(null, '', '#' + id);
+  }
+  function go(id, opts = {}) {
+    const guest = ['auth-f01-scr01', 'auth-f02-scr01', 'auth-f02-scr02'];
+    if (guest.includes(id) && loggedIn) return go('auth-f01-scr02');           // có phiên còn hiệu lực → trang chủ
+    if (loggedIn && loggedIn.expired) loggedIn = null;                         // AUTH-F01-US02-A2
+    if (id === 'auth-f01-scr02' && !loggedIn) return go('auth-f01-scr01');     // AUTH-F01-US02-A1
+    if (id === 'auth-f02-scr02' && !reset) return go('auth-f02-scr01');        // chưa xác minh → về bước 1, không thông báo
+    if (id === 'auth-f02-scr02' && !resetValid()) {                            // phiên đặt lại hết hiệu lực khi mở trang
+      return go('auth-f02-scr01', { error: 'Phiên xác minh đã hết hạn, vui lòng xác minh lại' });
+    }
+    // Khi vào màn: dọn form, hiện thông báo truyền theo
+    if (id === 'auth-f01-scr01') { $('login-form').reset(); showError('login-error', ''); $('login-ok').hidden = !opts.resetOk; }
+    if (id === 'auth-f02-scr01') { $('verify-form').reset(); showError('verify-error', opts.error || ''); }
+    if (id === 'auth-f02-scr02') { $('reset-form').reset(); showError('reset-error', ''); $('reset-account').textContent = 'Tài khoản: ' + reset.account.username; }
+    if (id === 'auth-f01-scr02') $('greeting').textContent = 'Xin chào ' + loggedIn.name;
+    show(id);
+  }
+  screens.forEach((s) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = s.dataset.title || s.id; b.dataset.id = s.id;
+    b.onclick = () => go(s.id);
+    nav.appendChild(b);
+  });
+
+  // ── AUTH-F01-US01 Đăng nhập ──────────────────────────────────────────
+  $('login-form').onsubmit = async (e) => {
+    e.preventDefault();
+    $('login-ok').hidden = true;                                   // ẩn thông báo thành công khi bấm nút 6
+    showError('login-error', '');
+    const u = $('login-username').value, p = $('login-password').value;
+    if (!u.trim() || !p) return showError('login-error', 'Nhập tên đăng nhập và mật khẩu');          // A1
+    const label = { idle: 'Đăng nhập', busy: 'Đang đăng nhập…' };
+    busy($('login-btn'), true, label);
+    try { await server(); } catch (msg) { busy($('login-btn'), false, label); return showError('login-error', msg); }  // E1, E2
+    busy($('login-btn'), false, label);
+    const acc = accounts.find((a) => norm(a.username) === norm(u));
+    if (!acc || acc.password !== p) return showError('login-error', 'Sai tên đăng nhập hoặc mật khẩu');  // A2, AUTH-BR02
+    loggedIn = acc;
+    go('auth-f01-scr02');
+  };
+
+  // ── AUTH-F01-US03 Đăng xuất ──────────────────────────────────────────
+  function logout() { loggedIn = null; go('auth-f01-scr01'); }
+
+  // ── AUTH-F02-US01 Xác minh tài khoản ─────────────────────────────────
+  $('verify-form').onsubmit = async (e) => {
+    e.preventDefault();
+    showError('verify-error', '');
+    const u = $('verify-username').value, m = $('verify-email').value;
+    if (!u.trim() || !m.trim()) return showError('verify-error', 'Nhập tên đăng nhập và email');      // A1
+    const label = { idle: 'Tiếp tục', busy: 'Đang kiểm tra…' };
+    busy($('verify-btn'), true, label);
+    try { await server(); } catch (msg) { busy($('verify-btn'), false, label); return showError('verify-error', msg); } // E1, E2
+    busy($('verify-btn'), false, label);
+    const acc = accounts.find((a) => norm(a.username) === norm(u) && a.email && norm(a.email) === norm(m));
+    if (!acc) return showError('verify-error', 'Tên đăng nhập hoặc email không đúng');               // A2, AUTH-BR02
+    if (reset && reset.status === 'con_hieu_luc') reset.status = 'da_huy';  // xác minh lại → phiên cũ hết hiệu lực
+    reset = { account: acc, status: 'con_hieu_luc', expired: false };       // AUTH-BR06 (hạn 10 phút)
+    go('auth-f02-scr02');
+  };
+
+  // ── AUTH-F02-US02 Đặt mật khẩu mới ───────────────────────────────────
+  $('reset-form').onsubmit = async (e) => {
+    e.preventDefault();
+    showError('reset-error', '');
+    if (!resetValid()) return go('auth-f02-scr01', { error: 'Phiên xác minh đã hết hạn, vui lòng xác minh lại' }); // A4 (trước lỗi nhập)
+    const p = $('reset-password').value, c = $('reset-confirm').value, len = [...p].length;
+    if (!p || !c) return showError('reset-error', 'Nhập mật khẩu mới và nhập lại mật khẩu');           // A1
+    if (len < 8) return showError('reset-error', 'Mật khẩu phải có ít nhất 8 ký tự');                  // A2
+    if (len > 16) return showError('reset-error', 'Mật khẩu tối đa 16 ký tự');                         // A5
+    if (p !== c) return showError('reset-error', 'Mật khẩu nhập lại không khớp');                      // A3
+    const label = { idle: 'Đặt lại mật khẩu', busy: 'Đang lưu…' };
+    busy($('reset-btn'), true, label);
+    try { await server(); } catch (msg) { busy($('reset-btn'), false, label); return showError('reset-error', msg); }  // E1, E2
+    busy($('reset-btn'), false, label);
+    reset.account.password = p;          // lưu mật khẩu mới
+    if (loggedIn === reset.account) loggedIn = null;   // AUTH-BR07 huỷ phiên cũ
+    reset.status = 'da_dung';            // AUTH-BR06 đóng phiên đặt lại
+    go('auth-f01-scr01', { resetOk: true });
+  };
+
+  // ── AUTH-F02-US02-A6 Bỏ đặt lại ──────────────────────────────────────
+  function cancelReset() { if (reset) reset.status = 'da_huy'; go('auth-f01-scr01'); }
+
+  // ── Công cụ của thanh PROTOTYPE ──────────────────────────────────────
+  function expireReset() { if (reset) reset.expired = true; }
+  // AUTH-F01-US02-A2: phiên hết hiệu lực → lần thao tác kế tiếp về trang đăng nhập
+  function expireLogin() { if (loggedIn) loggedIn = { expired: true }; }
+  function toggleTheme() {
+    const h = document.documentElement;
+    h.dataset.theme = h.dataset.theme === 'dark' ? 'light' : 'dark';
+  }
+
+  go(location.hash.slice(1) || 'auth-f01-scr01');
+</script>
+</body>
+</html>
