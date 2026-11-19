@@ -20,7 +20,10 @@ async function verified(page: Page, u: { username: string; email: string | null 
   await forgot.open();
   await forgot.verify(u.username, u.email ?? "");
   await expect(page).toHaveURL(RESET_URL);
-  return new ResetPasswordPage(page);
+  const reset = new ResetPasswordPage(page);
+  // Màn đã sẵn sàng khi kiểm phiên xong và hiện "Tài khoản: …" (trước đó nút Đặt lại còn khoá).
+  await expect(reset.account).toHaveText(`Tài khoản: ${u.username}`);
+  return reset;
 }
 
 // ── AUTH-F02-US01 Xác minh tài khoản ──────────────────────────────────────────

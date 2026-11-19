@@ -20,9 +20,9 @@ func main() {
 	port := env("PORT", "8080")
 	secret := env("JWT_SECRET", "dev-secret-change-me")
 
-	seed := []struct{ username, name, password string }{
-		{"admin", "Quản trị viên", "Admin@123"},
-		{"user1", "Nguyễn Văn A", "User@123"},
+	seed := []struct{ username, name, email, password string }{
+		{"admin", "Quản trị viên", "admin@project1.local", "Admin@123"},
+		{"user1", "Nguyễn Văn A", "user1@project1.local", "User@123"},
 	}
 	var users []store.User
 	for _, s := range seed {
@@ -31,7 +31,7 @@ func main() {
 			slog.Error("hash seed", "err", err)
 			os.Exit(1)
 		}
-		users = append(users, store.User{Username: s.username, Name: s.name, PasswordHash: hash})
+		users = append(users, store.User{Username: s.username, Name: s.name, Email: s.email, PasswordHash: hash})
 	}
 	st := store.New(users)
 

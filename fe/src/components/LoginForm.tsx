@@ -1,12 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ApiError, apiClient } from "@/lib/api";
 import { session } from "@/lib/session";
+import { useFlash } from "@/lib/useFlash";
+import { useGuestOnly } from "@/lib/useGuestOnly";
 
+// AUTH-F01-SCR01 — form đăng nhập.
 export function LoginForm() {
   const router = useRouter();
+  const guest = useGuestOnly(); // có phiên còn hiệu lực → về trang chủ
+  const [success, setSuccess] = useFlash("login"); // AUTH-F02-US02: "Đặt lại mật khẩu thành công…"; tải lại là mất
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -14,6 +20,7 @@ export function LoginForm() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setSuccess(""); // ẩn thông báo thành công khi bấm Đăng nhập
     setError("");
     setLoading(true);
     try {
@@ -27,45 +34,56 @@ export function LoginForm() {
     }
   }
 
+  if (!guest) return null;
   return (
-    <form onSubmit={onSubmit} className="space-y-4" noValidate>
-      <div className="space-y-1">
-        <label htmlFor="username" className="block text-sm font-medium">
-          Tên đăng nhập
-        </label>
-        <input
-          id="username"
-          autoComplete="username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
-        />
-      </div>
-      <div className="space-y-1">
-        <label htmlFor="password" className="block text-sm font-medium">
-          Mật khẩu
-        </label>
-        <input
-          id="password"
-          type="password"
-          autoComplete="current-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
-        />
-      </div>
-      {error && (
-        <p role="alert" data-testid="login-error" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error}
+    <>
+      {success && (
+        <p data-testid="login-success" className="mb-4 rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
+          {success}
         </p>
       )}
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full rounded-md bg-blue-600 px-3 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-60"
-      >
-        {loading ? "Đang đăng nhập…" : "Đăng nhập"}
-      </button>
-    </form>
+      <form onSubmit={onSubmit} className="space-y-4" noValidate>
+        <div className="space-y-1">
+          <label htmlFor="username" className="block text-sm font-medium">
+            Tên đăng nhập
+          </label>
+          <input
+            id="username"
+            autoComplete="username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+          />
+        </div>
+        <div className="space-y-1">
+          <label htmlFor="password" className="block text-sm font-medium">
+            Mật khẩu
+          </label>
+          <input
+            id="password"
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+          />
+        </div>
+        {error && (
+          <p role="alert" data-testid="login-error" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </p>
+        )}
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full rounded-md bg-blue-600 px-3 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+        >
+          {loading ? "Đang đăng nhập…" : "Đăng nhập"}
+        </button>
+      </form>
+      <Link href="/forgot-password" className="mt-4 inline-block text-sm text-blue-600 hover:underline">
+        Quên mật khẩu?
+      </Link>
+    </>
   );
 }
